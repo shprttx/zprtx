@@ -1,7 +1,7 @@
 @echo off
-set "LOCAL_VERSION=23.05.26"
+set "LOCAL_VERSION=05.06.26"
 
-::
+:: Проверка прав администратора
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo [!] Requesting administrator rights...
@@ -9,55 +9,57 @@ if %errorLevel% neq 0 (
     exit /b
 )
 
+title ZPRTX
+
+setlocal EnableDelayedExpansion
+
 ::
+for /F %%A in ('echo prompt $E ^| cmd') do set "ESC=%%A"
+set "p=!ESC![38;2;0;242;255m"   :: COLOR_MAIN (Неоновый циан)
+set "d=!ESC![38;2;112;0;255m"   :: COLOR_SECONDARY (Кибер-фиолетовый)
+set "w=!ESC![38;2;255;255;255m" :: TEXT_COLOR (Белый)
+set "g=!ESC![38;2;85;85;102m"   :: COLOR_BORDER (Темно-серый для рамок)
+set "ok=!ESC![38;2;0;255;128m"  :: Успех (Неоновый зеленый)
+set "err=!ESC![38;2;255;8;68m"  :: COLOR_ACCENT (Красный неон)
+set "r=!ESC![0m"                :: Сброс цвета
+
+:: Инициализация 
 if not defined IPsetStatus set "IPsetStatus=any"
 if not defined GameFilterStatus set "GameFilterStatus=enabled"
 if not defined CheckUpdatesStatus set "CheckUpdatesStatus=checking..."
 
-:: MENU ================================
-setlocal EnableDelayedExpansion
+:: MENU 
 :menu
 cls
 call :ipset_switch_status
 call :game_switch_status
 call :check_updates_switch_status
 
-:: 
 chcp 65001 >nul
 
-:: 
-for /F %%A in ('echo prompt $E ^| cmd') do set "ESC=%%A"
-set "p=!ESC![95m"   ::  фиолетовый
-set "d=!ESC![35m"   :: Темно-фиолетовый 
-set "w=!ESC![97m"   :: Белый текст
-set "g=!ESC![90m"   :: Серый 
-set "ok=!ESC![92m"  :: Зеленый (включен)
-set "inf=!ESC![96m" :: Голубой (всё)
-set "r=!ESC![0m"    :: Сброс цвета
-
-:: 
+:: Настройка отображения
 if /i "!GameFilterStatus!"=="enabled" (set "game_view=!ok!включен!r!") else (set "game_view=!g!выключен!r!")
-if /i "!IPsetStatus!"=="any" (set "ipset_view=!inf!всё!r!") 
-if /i "!IPsetStatus!"=="none" (set "ipset_view=!inf!выключен!r!") 
-if /i "!IPsetStatus!"=="loaded" (set "ipset_view=!inf!ограничено!r!")
+if /i "!IPsetStatus!"=="any" (set "ipset_view=!p!всё!r!") 
+if /i "!IPsetStatus!"=="none" (set "ipset_view=!p!выключен!r!") 
+if /i "!IPsetStatus!"=="loaded" (set "ipset_view=!p!ограничено!r!")
 
-::
 echo.
-echo  !p!◆ ZPRTX !d!// !g!v%LOCAL_VERSION%!r!
-echo  !d!──────────────────────────────────────────────!r!
-echo   !g![1]!w! Запустить!r!
-echo   !g![2]!w! Выключить!r!
-echo   !g![3]!w! Проверить статус!r!
-echo  !d!─── SETTINGS ────────────────────────────────!r!
-echo   !g![4]!w! Запуск диагностики!r!
-echo   !g![6]!w! Игровой Фильтр      ─── ^( !game_view! ^)!r!
-echo   !g![7]!w! Фильтрация трафика ─── ^( !ipset_view! ^)!r!
-echo  !d!──────────────────────────────────────────────!r!
-echo   !g![0]!w! Закрыть окно!r!
+echo   !p!Z P R T X !r!
+echo   !d!v%LOCAL_VERSION%  by shprot!r!
+echo  !g!══════════════════════════════════════════════!r!
+echo   !g![!p!1!g!]!w! Запустить!r!
+echo   !g![!p!2!g!]!w! Выключить!r!
+echo   !g![!p!3!g!]!w! Проверить статус!r!
+echo  !g!───!d! SETTINGS !g!────────────────────────────────!r!
+echo   !g![!p!4!g!]!w! Запуск диагностики!r!
+echo   !g![!p!6!g!]!w! Игровой Фильтр      !g!───!w! ^( !game_view! !w!^)!r!
+echo   !g![!p!7!g!]!w! Фильтрация трафика !g!───!w! ^( !ipset_view! !w!^)!r!
+echo  !g!══════════════════════════════════════════════!r!
+echo   !g![!err!0!g!]!w! Закрыть окно!r!
 echo.
 
 set "menu_choice=null"
-set /p menu_choice=!p! ❯ !w!Выбор: !r!
+set /p menu_choice=!p! ❯ !w!Выбор: !p!
 
 if "%menu_choice%"=="1" goto service_install
 if "%menu_choice%"=="2" goto service_remove
@@ -72,54 +74,47 @@ if "%menu_choice%"=="0" exit
 goto menu
 
 
-
-
-:: TCP ENABLE ==========================
+:: TCP ENABLE 
 :tcp_enable
 netsh interface tcp show global | findstr /i "timestamps" | findstr /i "enabled" > nul || netsh interface tcp set global timestamps=enabled > nul 2>&1
 exit /b
 
 
-:: STATUS ==============================
+:: STATUS 
 :service_status
 cls
 chcp 65001 > nul
 
-:: 
-
-powershell -NoProfile -Command "Write-Host 'by shprot' -ForegroundColor White"
+echo.
+echo  !w!by shprot!r!
 echo.
 
-:: проверка стратегии
+:: проверка 
 sc query "zprtx" >nul 2>&1
 if !errorlevel!==0 (
     for /f "tokens=2*" %%A in ('reg query "HKLM\System\CurrentControlSet\Services\zprtx" /v zprtx-roblox 2^>nul') do (
-        powershell -NoProfile -Command "Write-Host 'Service strategy installed from: ' -NoNewline; Write-Host '%%B' -ForegroundColor Magenta"
+        echo  !w!Service strategy installed from: !d!%%B!r!
     )
 )
 
-:: 
 call :test_service zprtx
 call :test_service WinDivert
 
-:: 
 set "BIN_PATH=%~dp0bin\"
 if not exist "%BIN_PATH%\*.sys" (
-    powershell -NoProfile -Command "Write-Host 'WinDivert64.sys file NOT found.' -ForegroundColor Red"
+    echo  !err!WinDivert64.sys file NOT found.!r!
 )
 echo:
 
-::
 tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
 if !errorlevel!==0 (
-    powershell -NoProfile -Command "Write-Host 'Bypass (winws.exe) is ' -NoNewline; Write-Host 'RUNNING.' -ForegroundColor Green"
+    echo  !w!Bypass ^(winws.exe^) is !ok!RUNNING.!r!
 ) else (
-    powershell -NoProfile -Command "Write-Host 'Bypass (winws.exe) is ' -NoNewline; Write-Host 'NOT running.' -ForegroundColor Red"
+    echo  !w!Bypass ^(winws.exe^) is !err!NOT running.!r!
 )
 
-::
 echo.
-powershell -NoProfile -Command "Write-Host '-----------------------------------------------------------' -ForegroundColor DarkMagenta"
+echo  !d!-----------------------------------------------------------!r!
 echo.
 pause
 goto menu
@@ -133,141 +128,115 @@ set "ServiceStatus=%ServiceStatus: =%"
 
 if "%ServiceStatus%"=="RUNNING" (
     if "%~2"=="soft" (
-        echo "%ServiceName%" is ALREADY RUNNING as service, use "service.bat" and choose "Remove Services" first if you want to run standalone bat.
+        echo  !w!"%ServiceName%" is ALREADY RUNNING as service, use "service.bat" and choose "Remove Services" first.!r!
         pause
         exit /b
     ) else (
-        echo "%ServiceName%" service is RUNNING.
+        echo  !w!"%ServiceName%" service is !ok!RUNNING.!r!
     )
 ) else if "%ServiceStatus%"=="STOP_PENDING" (
-    call :PrintYellow "!ServiceName! is STOP_PENDING, that may be caused by a conflict with another bypass. Run Diagnostics to try to fix conflicts"
+    call :PrintYellow "!ServiceName! is STOP_PENDING, that may be caused by a conflict with another bypass. Run Diagnostics to try to fix conflicts."
 ) else if not "%~2"=="soft" (
-    echo "%ServiceName%" service is NOT running.
+    echo  !w!"%ServiceName%" service is !err!NOT running.!r!
 )
 
 exit /b
 
 
-:: REMOVE ==============================
+:: REMOVE 
 :service_remove
 cls
 chcp 65001 > nul
 
-::
-for /F %%A in ('echo prompt $E ^| cmd') do set "ESC=%%A"
-set "p=!ESC![95m"   ::  фиолетовый
-set "d=!ESC![35m"   :: Темно-фиолетовый 
-set "w=!ESC![97m"   :: Белый текст
-set "g=!ESC![90m"   :: Серый текст
-set "ok=!ESC![92m"  :: Зеленый (успех)
-set "err=!ESC![91m" :: Красный (ошибка)
-set "r=!ESC![0m"    :: Сброс цвета
-
-::
 echo.
-echo  !p!◆ ZPRTX !d!// !g!ВЫКЛЮЧЕНИЕ СЛУЖБЫ!r!
-echo  !d!──────────────────────────────────────────────!r!
+echo   !p!Z P R T X !r!
+echo   !d!//!err!ВЫКЛЮЧЕНИЕ!r!
+echo  !g!══════════════════════════════════════════════!r!
 echo.
 
 set "SRVCNAME=zprtx"
 sc query "!SRVCNAME!" >nul 2>&1
 if !errorlevel!==0 (
-    echo   !w![^>] Останавливаю и удаляю службу: !SRVCNAME!...!r!
+    echo   !g![!p!^>!g!]!w! Останавливаю и удаляю службу: !SRVCNAME!...!r!
     net stop !SRVCNAME! >nul 2>&1
     sc delete !SRVCNAME! >nul 2>&1
-    echo   !ok![+] Готово.!r!
+    echo   !g![!ok!+!g!]!w! Готово.!r!
 ) else (
-    echo   !err![-] Служба "!SRVCNAME!" не установлена в системе.!r!
+    echo   !g![!err!-!g!]!w! Служба "!SRVCNAME!" не установлена в системе.!r!
 )
 
-:: Проверка winws.exe
 tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
 if !errorlevel!==0 (
-    echo   !w![^>] Завершаю процесс winws.exe...!r!
+    echo   !g![!p!^>!g!]!w! Завершаю процесс winws.exe...!r!
     taskkill /IM winws.exe /F > nul
-    echo   !ok![+] Готово.!r!
+    echo   !g![!ok!+!g!]!w! Готово.!r!
 )
 
-:: Проверка WinDivert
 sc query "WinDivert" >nul 2>&1
 if !errorlevel!==0 (
-    echo   !w![^>] Удаляю драйвер WinDivert...!r!
+    echo   !g![!p!^>!g!]!w! Удаляю драйвер WinDivert...!r!
     net stop "WinDivert" >nul 2>&1
     sc query "WinDivert" >nul 2>&1
     if !errorlevel!==0 (
         sc delete "WinDivert" >nul 2>&1
     )
-    echo   !ok![+] Готово.!r!
+    echo   !g![!ok!+!g!]!w! Готово.!r!
 )
 
-:: чистка
-echo   !w![^>] Окончательная очистка (WinDivert14)...!r!
+echo   !g![!p!^>!g!]!w! Окончательная очистка ^(WinDivert14^)...!r!
 net stop "WinDivert14" >nul 2>&1
 sc delete "WinDivert14" >nul 2>&1
-echo   !ok![+] Все системы полностью очищены.!r!
+echo   !g![!ok!+!g!]!w! Все системы полностью очищены.!r!
 
 echo.
-echo  !d!──────────────────────────────────────────────!r!
+echo  !g!──────────────────────────────────────────────!r!
 echo.
 pause
 goto menu
 
 
-:: INSTALL =============================
+:: INSTALL
 :service_install
 cls
 chcp 65001 > nul
 
-:: Цветовая палитра для нового интерфейса (ANSI)
-for /F %%A in ('echo prompt $E ^| cmd') do set "ESC=%%A"
-set "p=!ESC![95m"   :: фиолетовый
-set "d=!ESC![35m"   :: Темно-фиолетовый
-set "w=!ESC![97m"   :: Белый текст
-set "g=!ESC![90m"   :: Серый 
-set "m=!ESC![95m"   :: Фиолетовый 
-set "err=!ESC![91m" :: Красный для ошибок
-set "r=!ESC![0m"    :: Сброс цвета
-
-:: Установка путей
 cd /d "%~dp0"
 set "BIN_PATH=%~dp0bin\"
 set "LISTS_PATH=%~dp0lists\"
 
-:: Сбор списка файлов
 set "count=0"
 for %%f in (*.bat) do (
     set "filename=%%~nxf"
     if /i not "!filename:~0,7!"=="service" (
-        set /a count+=1
-        set "file!count!=%%f"
-        
-        :: Подготовка строк для красивой отрисовки через echo
-        if "!count!"=="1" (
-            set "FILE_LINE_!count!=  !g![!count!]!w! %%f !m!^<--- [РЕКОМЕНДУЕТСЯ]!r!"
-        ) else (
-            set "FILE_LINE_!count!=  !g![!count!]!w! %%f!r!"
+        if /i not "!filename!"=="MAIN.bat" (
+            set /a count+=1
+            set "file!count!=%%f"
+            
+            if "!count!"=="1" (
+                set "FILE_LINE_!count!=  !g![!p!!count!!g!]!w! %%f !d!^<--- [ЗАПУСКАТЬ ЭТО]!r!"
+            ) else (
+                set "FILE_LINE_!count!=  !g![!p!!count!!g!]!w! %%f!r!"
+            )
         )
     )
 )
 
-:: 
 echo.
-echo  !p!◆ ZPRTX !d!// !g!УСТАНОВКА СЛУЖБЫ!r!
-echo  !d!──────────────────────────────────────────────!r!
+echo   !p!Z P R T X !r!
+echo   !d!//!p!УСТАНОВКА СЛУЖБЫ!r!
+echo  !g!══════════════════════════════════════════════!r!
 echo   !w!Выберите один из доступных вариантов:!r!
 echo.
 
-:: Динамический вывод списка файлов через echo
 for /L %%i in (1,1,%count%) do (
     echo !FILE_LINE_%%i!
 )
 
 echo.
-echo  !d!──────────────────────────────────────────────!r!
+echo  !g!──────────────────────────────────────────────!r!
 
-:: Ввод выбора
 set "choice="
-set /p "choice=!p! ❯ !w!Введите номер файла: !r!"
+set /p "choice=!p! ❯ !w!Введите номер: !p!"
 
 if "!choice!"=="" (
     echo  !err![!] Выбор пуст, возвращаюсь в меню...!r!
@@ -275,19 +244,14 @@ if "!choice!"=="" (
     goto menu
 )
 
-
 set "selectedFile=!file%choice%!"
 if not defined selectedFile (
-    powershell -NoProfile -Command "Write-Host '  [!] Invalid choice, returning to menu...' -ForegroundColor Red"
+    echo  !err![!] Invalid choice, returning to menu...!r!
     timeout /t 2 > nul
     goto menu
 )
 
-:: 
-:: Args that should be followed by value
 set "args_with_value=sni host altorder"
-
-:: Parsing args (mergeargs: 2=start param|3=arg with value|1=params args|0=default)
 set "args="
 set "capture=0"
 set "mergeargs=0"
@@ -364,12 +328,11 @@ for /f "tokens=*" %%a in ('type "!selectedFile!"') do (
     )
 )
 
-:: Creating service with parsed args
 call :tcp_enable
 
 set ARGS=%args%
 call set "ARGS=%%ARGS:EXCL_MARK=^!%%"
-echo Final args: !ARGS!
+echo  !g![!p!^>!g!]!w! Final args: !p!!ARGS!!r!
 set SRVCNAME=zprtx
 
 net stop %SRVCNAME% >nul 2>&1
@@ -386,13 +349,16 @@ pause
 goto menu
 
 
-
-:: DIAGNOSTICS =========================
+:: DIAGNOSTICS 
 :service_diagnostics
-chcp 437 > nul
+chcp 65001 > nul
 cls
+echo.
+echo   !p!Z P R T X !r!
+echo   !d!//!p!ДИАГНОСТИКА!r!
+echo  !g!══════════════════════════════════════════════!r!
+echo.
 
-:: Base Filtering Engine
 sc query BFE | findstr /I "RUNNING" > nul
 if !errorlevel!==0 (
     call :PrintGreen "Base Filtering Engine check passed"
@@ -401,10 +367,8 @@ if !errorlevel!==0 (
 )
 echo:
 
-:: Proxy check
 set "proxyEnabled=0"
 set "proxyServer="
-
 for /f "tokens=2*" %%A in ('reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable 2^>nul ^| findstr /i "ProxyEnable"') do (
     if "%%B"=="0x1" set "proxyEnabled=1"
 )
@@ -413,7 +377,6 @@ if !proxyEnabled!==1 (
     for /f "tokens=2*" %%A in ('reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer 2^>nul ^| findstr /i "ProxyServer"') do (
         set "proxyServer=%%B"
     )
-    
     call :PrintYellow "[?] System proxy is enabled: !proxyServer!"
     call :PrintYellow "Make sure it's valid or disable it if you don't use a proxy"
 ) else (
@@ -421,7 +384,6 @@ if !proxyEnabled!==1 (
 )
 echo:
 
-:: Check netsh
 where netsh >nul 2>nul
 if !errorlevel! neq 0  (
     call :PrintRed "[X] netsh command not found, check your PATH variable"
@@ -431,7 +393,6 @@ if !errorlevel! neq 0  (
 	goto menu
 )
 
-:: TCP timestamps check
 netsh interface tcp show global | findstr /i "timestamps" | findstr /i "enabled" > nul
 if !errorlevel!==0 (
     call :PrintGreen "TCP timestamps check passed"
@@ -446,7 +407,6 @@ if !errorlevel!==0 (
 )
 echo:
 
-:: AdguardSvc.exe
 tasklist /FI "IMAGENAME eq AdguardSvc.exe" | find /I "AdguardSvc.exe" > nul
 if !errorlevel!==0 (
     call :PrintRed "[X] Adguard process found. Adguard may cause problems with Discord"
@@ -456,7 +416,6 @@ if !errorlevel!==0 (
 )
 echo:
 
-:: Killer
 sc query | findstr /I "Killer" > nul
 if !errorlevel!==0 (
     call :PrintRed "[X] Killer services found. Killer conflicts with zprtx"
@@ -466,7 +425,6 @@ if !errorlevel!==0 (
 )
 echo:
 
-:: Intel Connectivity Network Service
 sc query | findstr /I "Intel" | findstr /I "Connectivity" | findstr /I "Network" > nul
 if !errorlevel!==0 (
     call :PrintRed "[X] Intel Connectivity Network Service found. It conflicts with zprtx"
@@ -476,17 +434,11 @@ if !errorlevel!==0 (
 )
 echo:
 
-:: Check Point
 set "checkpointFound=0"
 sc query | findstr /I "TracSrvWrapper" > nul
-if !errorlevel!==0 (
-    set "checkpointFound=1"
-)
-
+if !errorlevel!==0 set "checkpointFound=1"
 sc query | findstr /I "EPWD" > nul
-if !errorlevel!==0 (
-    set "checkpointFound=1"
-)
+if !errorlevel!==0 set "checkpointFound=1"
 
 if !checkpointFound!==1 (
     call :PrintRed "[X] Check Point services found. Check Point conflicts with zprtx"
@@ -496,7 +448,6 @@ if !checkpointFound!==1 (
 )
 echo:
 
-:: SmartByte
 sc query | findstr /I "SmartByte" > nul
 if !errorlevel!==0 (
     call :PrintRed "[X] SmartByte services found. SmartByte conflicts with zprtx"
@@ -506,14 +457,12 @@ if !errorlevel!==0 (
 )
 echo:
 
-:: WinDivert64.sys file
 set "BIN_PATH=%~dp0bin\"
 if not exist "%BIN_PATH%\*.sys" (
     call :PrintRed "WinDivert64.sys file NOT found."
 )
 echo:
 
-:: VPN
 set "VPN_SERVICES="
 sc query | findstr /I "VPN" > nul
 if !errorlevel!==0 (
@@ -531,12 +480,9 @@ if !errorlevel!==0 (
 )
 echo:
 
-:: DNS
 set "dohfound=0"
 for /f "delims=" %%a in ('powershell -Command "Get-ChildItem -Recurse -Path 'HKLM:System\CurrentControlSet\Services\Dnscache\InterfaceSpecificParameters\' | Get-ItemProperty | Where-Object { $_.DohFlags -gt 0 } | Measure-Object | Select-Object -ExpandProperty Count"') do (
-    if %%a gtr 0 (
-        set "dohfound=1"
-    )
+    if %%a gtr 0 set "dohfound=1"
 )
 if !dohfound!==0 (
     call :PrintYellow "[?] Make sure you have configured secure DNS in a browser with some non-default DNS service provider,"
@@ -546,7 +492,6 @@ if !dohfound!==0 (
 )
 echo:
 
-:: WinDivert conflict
 tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
 set "winws_running=!errorlevel!"
 
@@ -561,7 +506,6 @@ if !winws_running! neq 0 if !windivert_running!==0 (
     sc query "WinDivert" >nul 2>&1
     if !errorlevel!==0 (
         call :PrintRed "[X] Failed to delete WinDivert. Checking for conflicting services..."
-        
         set "conflicting_services=GoodbyeDPI"
         set "found_conflict=0"
         
@@ -584,7 +528,6 @@ if !winws_running! neq 0 if !windivert_running!==0 (
             call :PrintRed "[X] No conflicting services found. Check manually if any other bypass is using WinDivert."
         ) else (
             call :PrintYellow "[?] Attempting to delete WinDivert again..."
-
             net stop "WinDivert" >nul 2>&1
             sc delete "WinDivert" >nul 2>&1
             sc query "WinDivert" >nul 2>&1
@@ -597,11 +540,9 @@ if !winws_running! neq 0 if !windivert_running!==0 (
     ) else (
         call :PrintGreen "WinDivert successfully removed"
     )
-    
     echo:
 )
 
-:: Conflicting bypasses
 set "conflicting_services=GoodbyeDPI discordfix_zprtx winws1 winws2"
 set "found_any_conflict=0"
 set "found_conflicts="
@@ -622,7 +563,7 @@ if !found_any_conflict!==1 (
     call :PrintRed "[X] Conflicting bypass services found: !found_conflicts!"
     
     set "CHOICE="
-    set /p "CHOICE=Do you want to remove these conflicting services? (Y/N) (default: N) "
+    set /p "CHOICE=!p!Do you want to remove these conflicting services? (Y/N) (default: N) !p!"
     if "!CHOICE!"=="" set "CHOICE=N"
     if "!CHOICE!"=="y" set "CHOICE=Y"
     
@@ -637,26 +578,23 @@ if !found_any_conflict!==1 (
                 call :PrintRed "[X] Failed to remove service: %%s"
             )
         )
-
         net stop "WinDivert" >nul 2>&1
         sc delete "WinDivert" >nul 2>&1
         net stop "WinDivert14" >nul 2>&1
         sc delete "WinDivert14" >nul 2>&1
     )
-    
     echo:
 )
 
-:: Discord cache clearing
 set "CHOICE="
-set /p "CHOICE=Do you want to clear the Discord cache? (Y/N) (default: Y)  "
+set /p "CHOICE=!p!Do you want to clear the Discord cache? (Y/N) (default: Y) !p!"
 if "!CHOICE!"=="" set "CHOICE=Y"
 if "!CHOICE!"=="y" set "CHOICE=Y"
 
 if /i "!CHOICE!"=="Y" (
     tasklist /FI "IMAGENAME eq Discord.exe" | findstr /I "Discord.exe" > nul
     if !errorlevel!==0 (
-        echo Discord is running, closing...
+        echo !w!Discord is running, closing...!r!
         taskkill /IM Discord.exe /F > nul
         if !errorlevel! == 0 (
             call :PrintGreen "Discord was successfully closed"
@@ -687,12 +625,10 @@ pause
 goto menu
 
 
-:: GAME SWITCH ========================
+:: GAME SWITCH 
 :game_switch_status
-chcp 437 > nul
-
+chcp 65001 > nul
 set "gameFlagFile=%~dp0utils\game_filter.enabled"
-
 if exist "%gameFlagFile%" (
     set "GameFilterStatus=enabled"
     set "GameFilter=1024-65535"
@@ -702,31 +638,26 @@ if exist "%gameFlagFile%" (
 )
 exit /b
 
-
 :game_switch
-chcp 437 > nul
+chcp 65001 > nul
 cls
-
 if not exist "%gameFlagFile%" (
-    echo Enabling game filter...
+    echo !w!Enabling game filter...!r!
     echo ENABLED > "%gameFlagFile%"
     call :PrintYellow "Restart the zprtx to apply the changes"
 ) else (
-    echo Disabling game filter...
+    echo !w!Disabling game filter...!r!
     del /f /q "%gameFlagFile%"
     call :PrintYellow "Restart the zprtx to apply the changes"
 )
-
 pause
 goto menu
 
 
-:: CHECK UPDATES SWITCH =================
+:: CHECK UPDATES SWITCH 
 :check_updates_switch_status
-chcp 437 > nul
-
+chcp 65001 > nul
 set "checkUpdatesFlag=%~dp0utils\check_updates.enabled"
-
 if exist "%checkUpdatesFlag%" (
     set "CheckUpdatesStatus=enabled"
 ) else (
@@ -734,30 +665,25 @@ if exist "%checkUpdatesFlag%" (
 )
 exit /b
 
-
 :check_updates_switch
-chcp 437 > nul
+chcp 65001 > nul
 cls
-
 if not exist "%checkUpdatesFlag%" (
-    echo Enabling check updates...
+    echo !w!Enabling check updates...!r!
     echo ENABLED > "%checkUpdatesFlag%"
 ) else (
-    echo Disabling check updates...
+    echo !w!Disabling check updates...!r!
     del /f /q "%checkUpdatesFlag%"
 )
-
 pause
 goto menu
 
 
-:: IPSET SWITCH =======================
+:: IPSET SWITCH 
 :ipset_switch_status
-chcp 437 > nul
-
+chcp 65001 > nul
 set "listFile=%~dp0lists\ipset-all.txt"
 for /f %%i in ('type "%listFile%" 2^>nul ^| find /c /v ""') do set "lineCount=%%i"
-
 if !lineCount!==0 (
     set "IPsetStatus=any"
 ) else (
@@ -770,62 +696,46 @@ if !lineCount!==0 (
 )
 exit /b
 
-
 :ipset_switch
-chcp 437 > nul
+chcp 65001 > nul
 cls
-
 set "listFile=%~dp0lists\ipset-all.txt"
 set "backupFile=%listFile%.backup"
 
 if "%IPsetStatus%"=="loaded" (
-    echo Switching to none mode...
-    
+    echo !w!Switching to none mode...!r!
     if not exist "%backupFile%" (
         ren "%listFile%" "ipset-all.txt.backup"
     ) else (
         del /f /q "%backupFile%"
         ren "%listFile%" "ipset-all.txt.backup"
     )
-    
-    >"%listFile%" (
-        echo 203.0.113.113/32
-    )
-    
+    >"%listFile%" echo 203.0.113.113/32
 ) else if "%IPsetStatus%"=="none" (
-    echo Switching to any mode...
-    
-    >"%listFile%" (
-        rem Creating empty file
-    )
-    
+    echo !w!Switching to any mode...!r!
+    >"%listFile%" echo.
 ) else if "%IPsetStatus%"=="any" (
-    echo Switching to loaded mode...
-    
+    echo !w!Switching to loaded mode...!r!
     if exist "%backupFile%" (
         del /f /q "%listFile%"
         ren "%backupFile%" "ipset-all.txt"
     ) else (
-        echo Error: no backup to restore. Update list from service menu first
+        echo !err!Error: no backup to restore. Update list from service menu first!r!
         pause
         goto menu
     )
-    
 )
-
 pause
 goto menu
 
 
-:: IPSET UPDATE =======================
+:: IPSET UPDATE 
 :ipset_update
-chcp 437 > nul
+chcp 65001 > nul
 cls
-
 set "listFile=%~dp0lists\ipset-all.txt"
 set "url=https://raw.githubusercontent.com/Lux1de/zprtx-roblox/refs/heads/main/.service/ipset-service.txt"
-
-echo Updating ipset-all...
+echo !w!Updating ipset-all...!r!
 
 if exist "%SystemRoot%\System32\curl.exe" (
     curl -L -o "%listFile%" "%url%"
@@ -838,24 +748,21 @@ if exist "%SystemRoot%\System32\curl.exe" (
         "$res = Invoke-WebRequest -Uri $url -TimeoutSec 10 -UseBasicParsing;" ^
         "if ($res.StatusCode -eq 200) { $res.Content | Out-File -FilePath $out -Encoding UTF8 } else { exit 1 }"
 )
-
-echo Finished
-
+echo !ok!Finished!r!
 pause
 goto menu
 
 
 :: HOSTS UPDATE =======================
 :hosts_update
-chcp 437 > nul
+chcp 65001 > nul
 cls
-
 set "hostsFile=%SystemRoot%\System32\drivers\etc\hosts"
 set "hostsUrl=https://raw.githubusercontent.com/Lux1de/zprtx-roblox/refs/heads/main/.service/hosts"
 set "tempFile=%TEMP%\zprtx_hosts.txt"
 set "needsUpdate=0"
 
-echo Checking hosts file...
+echo !w!Checking hosts file...!r!
 
 if exist "%SystemRoot%\System32\curl.exe" (
     curl -L -s -o "%tempFile%" "%hostsUrl%"
@@ -877,21 +784,19 @@ if not exist "%tempFile%" (
 set "firstLine="
 set "lastLine="
 for /f "usebackq delims=" %%a in ("%tempFile%") do (
-    if not defined firstLine (
-        set "firstLine=%%a"
-    )
+    if not defined firstLine set "firstLine=%%a"
     set "lastLine=%%a"
 )
 
 findstr /C:"!firstLine!" "%hostsFile%" >nul 2>&1
 if !errorlevel! neq 0 (
-    echo First line from repository not found in hosts file
+    echo !w!First line from repository not found in hosts file!r!
     set "needsUpdate=1"
 )
 
 findstr /C:"!lastLine!" "%hostsFile%" >nul 2>&1
 if !errorlevel! neq 0 (
-    echo Last line from repository not found in hosts file
+    echo !w!Last line from repository not found in hosts file!r!
     set "needsUpdate=1"
 )
 
@@ -899,35 +804,32 @@ if "%needsUpdate%"=="1" (
     echo:
     call :PrintYellow "Hosts file needs to be updated"
     call :PrintYellow "Please manually copy the content from the downloaded file to your hosts file"
-    
     start notepad "%tempFile%"
     explorer /select,"%hostsFile%"
 ) else (
     call :PrintGreen "Hosts file is up to date"
     if exist "%tempFile%" del /f /q "%tempFile%"
 )
-
 echo:
 pause
 goto menu
 
 
-:: RUN TESTS =============================
+:: RUN TESTS 
 :run_tests
 chcp 65001 >nul
 cls
 
-:: Require PowerShell 3.0+
 powershell -NoProfile -Command "if ($PSVersionTable -and $PSVersionTable.PSVersion -and $PSVersionTable.PSVersion.Major -ge 3) { exit 0 } else { exit 1 }" >nul 2>&1
 if %errorLevel% neq 0 (
-    echo PowerShell 3.0 or newer is required.
-    echo Please upgrade PowerShell and rerun this script.
+    echo !err!PowerShell 3.0 or newer is required.!r!
+    echo !err!Please upgrade PowerShell and rerun this script.!r!
     echo.
     pause
     goto menu
 )
 
-echo Starting configuration tests in PowerShell window...
+echo !p!Starting configuration tests in PowerShell window...!r!
 echo.
 start "" powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0utils\test zprtx.ps1"
 pause
@@ -935,24 +837,23 @@ goto menu
 
 
 :: Utility functions
-
 :PrintGreen
-powershell -Command "Write-Host \"%~1\" -ForegroundColor Green"
+echo !ok!%~1!r!
 exit /b
 
 :PrintRed
-powershell -Command "Write-Host \"%~1\" -ForegroundColor Red"
+echo !err!%~1!r!
 exit /b
 
 :PrintYellow
-powershell -Command "Write-Host \"%~1\" -ForegroundColor Yellow"
+echo !p!%~1!r!
 exit /b
 
 :check_command
 where %1 >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ERROR] %1 not found in PATH
-    echo Fix your PATH variable with instructions here https://github.com/Lux1de/zprtx-roblox/issues
+    echo !err![ERROR] %1 not found in PATH!r!
+    echo !w!Fix your PATH variable with instructions here https://github.com/Lux1de/zprtx-roblox/issues!r!
     pause
     exit /b 1
 )
@@ -960,11 +861,9 @@ exit /b 0
 
 :check_extracted
 set "extracted=1"
-
 if not exist "%~dp0bin\" set "extracted=0"
-
 if "%extracted%"=="0" (
-    echo zprtx must be extracted from archive first or bin folder not found for some reason
+    echo !err!zprtx must be extracted from archive first or bin folder not found for some reason!r!
     pause
     exit
 )
