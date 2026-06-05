@@ -17,7 +17,7 @@
 
 ---
 <div align="center">
-  <img src="ZP.png" alt="ZPRTX" width="400" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #351c59;">
+  <img src="OO.png" alt="ZPRTX" width="400" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #351c59;">
 </div>
 
 
